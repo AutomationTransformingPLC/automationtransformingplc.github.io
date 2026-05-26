@@ -640,8 +640,8 @@ function setFilter(cat, btn) {
 function copyPrompt(card, text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text)
-      .then(() => animarBotao(card))
-      .catch(() => usarMetodoAntigo(card, text));
+      .then(() => animateButton(card))
+      .catch(() => otherMethod(card, text));
   } else {
     usarMetodoAntigo(card, text);
   }
