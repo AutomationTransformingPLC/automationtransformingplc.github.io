@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Microsoft Copilot Prompt Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f5f8fa;
+    --surface2: #eaf3f8;
+    --border: rgba(62,198,229,0.18);
+    --accent: #3ec6e5;
+    --accent2: #534f9b;
+    --glow: rgba(62,198,229,0.15);
+    --text: #2a2a3a;
+    --muted: #5a5a7a;
+    --tag-bg: rgba(62,198,229,0.10);
+
+    --cat1: #3ec6e5; /* Drafting */
+    --cat2: #534f9b; /* Summarising */
+    --cat3: #e16a41; /* Automating */
+    --cat4: #7b5a8a; /* Meeting */
+    --cat5: #e16a41; /* Content */
+    --cat6: #3ec6e5; /* Data */
+    --cat7: #534f9b; /* Email */
+    --cat8: #5a5a7a; /* Productivity */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(62,198,229,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(62,198,229,0.05) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.12;
+  }
+  .orb1 { width: 500px; height: 500px; background: #3ec6e5; top: -150px; left: -150px; }
+  .orb2 { width: 400px; height: 400px; background: #7b5a8a; bottom: 10%; right: -100px; }
+  .orb3 { width: 300px; height: 300px; background: #534f9b; top: 45%; left: 40%; }
+
+  /* Layout */
+  .wrapper { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 64px 0 48px;
+    position: relative;
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .copilot-icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, #3ec6e5, #534f9b);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 0 24px rgba(62,198,229,0.25);
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #2a2a3a 20%, #3ec6e5 60%, #534f9b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 1.05rem;
+    font-weight: 300;
+    margin-top: 10px;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+
+  /* Badges */
+  .badge-row {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 20px;
+  }
+  .badge {
+    background: rgba(62,198,229,0.08);
+    border: 1px solid rgba(62,198,229,0.25);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.78rem;
+    color: #534f9b;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  /* Rules banner */
+  .rules-banner {
+    background: linear-gradient(135deg, rgba(62,198,229,0.06), rgba(83,79,155,0.06));
+    border: 1px solid rgba(62,198,229,0.20);
+    border-radius: 16px;
+    padding: 20px 28px;
+    margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .rule-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.83rem;
+    color: #5a5a7a;
+    line-height: 1.5;
+  }
+  .rule-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+  .rule-item strong { color: #2a2a3a; display: block; font-size: 0.8rem; margin-bottom: 2px; }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 32px;
+    align-items: center;
+  }
+  .search-wrap {
+    flex: 1;
+    min-width: 220px;
+    position: relative;
+  }
+  .search-wrap input {
+    width: 100%;
+    background: #f5f8fa;
+    border: 1px solid rgba(62,198,229,0.30);
+    border-radius: 10px;
+    padding: 10px 16px 10px 40px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: #3ec6e5; }
+  .search-wrap input::placeholder { color: #5a5a7a; }
+  .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; color: #5a5a7a; pointer-events: none; }
+
+  .filter-btn {
+    background: #f5f8fa;
+    border: 1px solid rgba(62,198,229,0.25);
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: #5a5a7a;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: #3ec6e5; color: #3ec6e5; }
+  .filter-btn.active { background: #3ec6e5; border-color: #3ec6e5; color: #fff; }
+
+  /* Results count */
+  .results-info { color: #5a5a7a; font-size: 0.82rem; margin-bottom: 20px; }
+
+  /* Category sections */
+  .category-section { margin-bottom: 44px; }
+  .category-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(62,198,229,0.18);
+  }
+  .cat-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .category-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .cat-count {
+    margin-left: auto;
+    background: rgba(62,198,229,0.10);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.75rem;
+    color: #5a5a7a;
+  }
+  .cat-desc {
+    font-size: 0.82rem;
+    color: #5a5a7a;
+    flex: 1;
+    font-style: italic;
+  }
+
+  /* Prompt grid */
+  .prompt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 14px;
+  }
+
+  /* Prompt card */
+  .prompt-card {
+    background: #ffffff;
+    border: 1px solid rgba(62,198,229,0.18);
+    border-radius: 14px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 2px 8px rgba(83,79,155,0.05);
+  }
+  .prompt-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--cat-color, #3ec6e5);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .prompt-card:hover {
+    border-color: rgba(62,198,229,0.40);
+    background: #f5f8fa;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(62,198,229,0.12);
+  }
+  .prompt-card:hover::before { opacity: 1; }
+
+  .prompt-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .prompt-app {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .app-tag {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(83,79,155,0.08);
+    color: #534f9b;
+    border: 1px solid rgba(83,79,155,0.15);
+  }
+
+  .prompt-text {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: #2a2a3a;
+    font-weight: 400;
+    flex: 1;
+  }
+
+  .prompt-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+  .copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(62,198,229,0.08);
+    border: 1px solid rgba(62,198,229,0.25);
+    border-radius: 7px;
+    padding: 5px 12px;
+    color: #3ec6e5;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .copy-btn:hover { background: rgba(62,198,229,0.16); }
+  .copy-btn.copied { background: rgba(62,198,229,0.15); border-color: rgba(62,198,229,0.4); color: #2a9ab5; }
+
+  .tip-tag {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(225,106,65,0.10);
+    border: 1px solid rgba(225,106,65,0.22);
+    color: #e16a41;
+    font-weight: 600;
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    color: #5a5a7a;
+    font-size: 0.78rem;
+    padding-top: 32px;
+    border-top: 1px solid rgba(62,198,229,0.18);
+    line-height: 1.8;
+  }
+  footer strong { color: #534f9b; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .prompt-grid { grid-template-columns: 1fr; }
+    .rules-banner { grid-template-columns: 1fr; }
+    header { padding: 40px 0 32px; }
+  }
+
+  /* Animation */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .prompt-card { animation: fadeUp 0.4s ease both; }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="wrapper">
+
+  <header>
+    <div class="logo-row">
+      <div class="copilot-icon">✦</div>
+      <h1>Copilot Prompt Library</h1>
+    </div>
+    <p class="subtitle">Ready-to-use prompts for Microsoft 365 Copilot — across Word, Excel, Outlook, Teams, PowerPoint, Edge & Windows 11.</p>
+    <div class="badge-row">
+      <span class="badge">Microsoft 365</span>
+      <span class="badge">Edge</span>
+      <span class="badge">Windows 11</span>
+      <span class="badge">Teams</span>
+      <span class="badge">Outlook</span>
+      <span class="badge">Excel</span>
+      <span class="badge">PowerPoint</span>
+      <span class="badge">Word</span>
+    </div>
+  </header>
+
+  <div class="rules-banner">
+    <div class="rule-item">
+      <span class="rule-icon">🎯</span>
+      <div><strong>Be Specific</strong>Ask precise questions for better results. Include context, format, and scope.</div>
+    </div>
+    <div class="rule-item">
+      <span class="rule-icon">✅</span>
+      <div><strong>Validate Outputs</strong>Always review AI-generated content before sharing or using in decisions.</div>
+    </div>
+    <div class="rule-item">
+      <span class="rule-icon">🔒</span>
+      <div><strong>Protect Data</strong>Keep all work within Microsoft 365. Comply with UK GDPR & ICO guidance.</div>
+    </div>
+    <div class="rule-item">
+      <span class="rule-icon">🧠</span>
+      <div><strong>Leverage Personalisation</strong>Copilot learns your preferences — use tailored prompts and reminders.</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search prompts..." oninput="filterPrompts()">
+    </div>
+    <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-btn" onclick="setFilter('Drafting', this)">Drafting</button>
+    <button class="filter-btn" onclick="setFilter('Summarising', this)">Summarising</button>
+    <button class="filter-btn" onclick="setFilter('Automating', this)">Automating</button>
+    <button class="filter-btn" onclick="setFilter('Meeting', this)">Meetings</button>
+    <button class="filter-btn" onclick="setFilter('Content', this)">Content</button>
+    <button class="filter-btn" onclick="setFilter('Data', this)">Data</button>
+    <button class="filter-btn" onclick="setFilter('Email', this)">Email</button>
+    <button class="filter-btn" onclick="setFilter('Productivity', this)">Productivity</button>
+  </div>
+
+  <div class="results-info" id="resultsInfo"></div>
+  <div id="promptContainer"></div>
+
+  <footer>
+    <strong>Safe &amp; Responsible Use</strong> — Keep all data inside Microsoft 365 · Comply with UK GDPR &amp; ICO guidance · Review and edit all AI outputs before sharing externally<br>
+    Copilot works best with clear, specific, context-rich prompts. Click any card to copy the prompt.
+  </footer>
+
+</div>
+
+<script>
+const categories = [
+  {
+    id: 'Drafting',
+    label: '✍️ Drafting Documents',
+    desc: 'Word · Copilot Chat',
+    color: '#3b82f6',
+    prompts: [
+      { text: "Draft a one-page action plan template for an operational project, including sections for objectives, key milestones, responsible owners, timelines, and success metrics.", apps: ["Word", "Copilot"], tip: true },
+      { text: "Write a professional project proposal for [project name]. Include an executive summary, problem statement, proposed solution, timeline, resource requirements, and expected outcomes.", apps: ["Word"] },
+      { text: "Rewrite the following paragraph for clarity and professionalism, maintaining the original meaning but improving structure and tone: [paste text]", apps: ["Word", "Copilot"] },
+      { text: "Create a business case template for requesting budget approval, including sections for current situation, proposed investment, cost-benefit analysis, risks, and recommendation.", apps: ["Word"] },
+      { text: "Draft a stakeholder communication email announcing [project/change], including background context, key changes, impact on teams, timeline, and next steps.", apps: ["Word", "Outlook"] },
+      { text: "Generate a risk register template for a mid-sized operational project with columns for risk ID, description, likelihood, impact, risk owner, and mitigation actions.", apps: ["Word", "Excel"] },
+      { text: "Write a formal report structure for a quarterly business review covering performance highlights, challenges encountered, lessons learned, and recommendations for next quarter.", apps: ["Word"] },
+      { text: "Turn these rough bullet points into a polished, professional memo suitable for senior leadership: [paste bullets]", apps: ["Word", "Copilot"] },
+      { text: "Create a process documentation template for [process name], including purpose, scope, step-by-step procedure, roles and responsibilities, and version history.", apps: ["Word"] },
+      { text: "Draft a terms of reference document for a new working group on [topic], covering purpose, membership, governance, meeting frequency, and decision-making process.", apps: ["Word"] },
+    ]
+  },
+  {
+    id: 'Summarising',
+    label: '📋 Summarising Information',
+    desc: 'Copilot Chat · Teams · Outlook · Edge',
+    color: '#8b5cf6',
+    prompts: [
+      { text: "Summarise last week's leadership meeting and create a bullet-point list of decisions made, action items assigned, owners responsible, and deadlines agreed.", apps: ["Teams", "Copilot"], tip: true },
+      { text: "Condense this 10-page report into a one-page executive summary highlighting the key findings, recommendations, and immediate next steps.", apps: ["Word", "Copilot"] },
+      { text: "Summarise the key risks discussed in this meeting transcript and list them by priority, with proposed mitigation actions for each.", apps: ["Teams", "Copilot"] },
+      { text: "Read this web page and give me the five most important takeaways relevant to [your topic or role].", apps: ["Edge"] },
+      { text: "Summarise this lengthy email thread in three bullet points: what was requested, what was agreed, and what still needs a decision.", apps: ["Outlook", "Copilot"] },
+      { text: "Review these meeting notes and extract only the action items, listing each with the responsible person and agreed deadline.", apps: ["Teams", "Copilot"] },
+      { text: "Summarise the attached policy document and highlight any sections that require action or review from my team.", apps: ["Word", "Copilot"] },
+      { text: "Provide a brief summary of this research article in plain English, including the main argument, key evidence, and conclusions.", apps: ["Edge", "Copilot"] },
+      { text: "Summarise the changes in this updated version of the document compared to the previous version, focusing on what has been added, removed, or significantly altered.", apps: ["Word"] },
+      { text: "From this week's team updates, create a concise status report covering progress made, blockers identified, and upcoming priorities.", apps: ["Teams", "Copilot"] },
+    ]
+  },
+  {
+    id: 'Automating',
+    label: '⚙️ Automating Repetitive Tasks',
+    desc: 'Excel · Planner · To Do · Windows 11',
+    color: '#10b981',
+    prompts: [
+      { text: "Generate a 6-month budget forecast spreadsheet with columns for budget category, monthly planned spend, actual spend, variance, and cumulative totals. Include key assumptions as footnotes.", apps: ["Excel"], tip: true },
+      { text: "Create an Excel formula to calculate the percentage change between this month's and last month's values in column B, and apply conditional formatting to highlight increases in green and decreases in red.", apps: ["Excel"] },
+      { text: "Build a pivot table from this dataset showing total sales by region and product category, with the ability to filter by quarter.", apps: ["Excel"] },
+      { text: "Generate a macro in Excel that automatically formats this data table: freeze the header row, apply alternating row colours, bold headers, and auto-fit all column widths.", apps: ["Excel"] },
+      { text: "Create a project tracker template in Excel with columns for task name, owner, start date, due date, % complete, status (RAG), and comments. Apply conditional formatting to the status column.", apps: ["Excel", "Planner"] },
+      { text: "From the following list of tasks, create a structured to-do list in Microsoft To Do with due dates, priorities, and categories: [paste tasks]", apps: ["To Do", "Planner"] },
+      { text: "Set up a recurring weekly summary task in Planner for the team to complete every Friday by 4pm, listing their top three achievements and blockers.", apps: ["Planner"] },
+      { text: "Generate an Excel VLOOKUP formula to match employee IDs in column A of Sheet1 with salary data in Sheet2 and return the corresponding salary in column B.", apps: ["Excel"] },
+      { text: "Create a data validation drop-down list in Excel for the Status column with options: Not Started, In Progress, On Hold, Complete, and Cancelled.", apps: ["Excel"] },
+      { text: "Build an automated attendance tracker in Excel that highlights absences in red, calculates total days present per person, and shows a monthly summary chart.", apps: ["Excel"] },
+    ]
+  },
+  {
+    id: 'Meeting',
+    label: '🗓️ Meeting Preparation & Recap',
+    desc: 'Teams · Outlook · Copilot Chat',
+    color: '#f59e0b',
+    prompts: [
+      { text: "Prepare me for my meeting with [stakeholder/team] on [topic]. Suggest five questions I should ask, key points to cover, and potential objections to anticipate.", apps: ["Copilot", "Teams"], tip: true },
+      { text: "Based on the agenda for today's project review meeting, draft a set of talking points for my opening five minutes, including context, current status, and what decisions I need from the group.", apps: ["Copilot", "Teams"] },
+      { text: "Summarise the action items from today's Teams meeting, list each item with the responsible owner, agreed deadline, and priority level.", apps: ["Teams"] },
+      { text: "Draft a meeting recap email for [meeting name] held on [date], covering key topics discussed, decisions reached, and next steps with owners and due dates.", apps: ["Outlook", "Teams"] },
+      { text: "Review the attached meeting transcript and identify any unresolved issues or open questions that need follow-up.", apps: ["Teams", "Copilot"] },
+      { text: "Create a meeting agenda template for a 60-minute monthly team review, including time slots for updates, blockers, decisions needed, and any other business.", apps: ["Word", "Teams"] },
+      { text: "Prepare briefing notes for my upcoming meeting with [senior stakeholder]. Summarise the current project status, key risks, and the three most important things they need to know.", apps: ["Copilot", "Word"] },
+      { text: "Based on this file/document, confirm the key commitments made and flag anything that needs clarification or escalation before the next meeting.", apps: ["Copilot", "Word"] },
+      { text: "Generate five probing questions I can ask in a performance review conversation to encourage open, honest dialogue and understand blockers.", apps: ["Copilot"] },
+      { text: "Draft a post-meeting survey with five short questions to gather feedback on whether today's meeting was effective, well-structured, and actionable.", apps: ["Forms", "Copilot"] },
+    ]
+  },
+  {
+    id: 'Content',
+    label: '🎨 Content Generation',
+    desc: 'PowerPoint · Word · Designer · Copilot',
+    color: '#ef4444',
+    prompts: [
+      { text: "Build a 5-slide presentation on workforce skills development. Include: current skills landscape, identified gaps, proposed learning interventions, success metrics, and a call to action.", apps: ["PowerPoint"], tip: true },
+      { text: "Create a 10-slide executive briefing deck on [project/initiative], with sections for context, objectives, progress update, risks, financials, and next steps.", apps: ["PowerPoint"] },
+      { text: "Generate slide content for a team away-day about our departmental strategy. Include vision, priorities, team values, key challenges, and an interactive workshop activity.", apps: ["PowerPoint"] },
+      { text: "Write an engaging introduction paragraph for our organisation's annual report, emphasising achievements, resilience, and future ambitions.", apps: ["Word", "Copilot"] },
+      { text: "Create a one-page fact sheet about [service/programme] for an external audience, covering what it is, who it helps, key achievements, and how to get involved.", apps: ["Word"] },
+      { text: "Write a compelling LinkedIn post announcing [news/achievement], keeping it professional, concise, and ending with a question to encourage engagement.", apps: ["Copilot", "Edge"] },
+      { text: "Generate content for three internal newsletter articles about: (1) a recent team win, (2) an upcoming change, and (3) a staff wellbeing initiative.", apps: ["Word", "Copilot"] },
+      { text: "Create a training slide deck on 'How to use Microsoft Copilot effectively' with five slides covering: what Copilot is, key use cases, how to write good prompts, responsible use, and top tips.", apps: ["PowerPoint"] },
+      { text: "Draft talking points for a 3-minute video script introducing [new process or tool] to staff, using a friendly, clear, and encouraging tone.", apps: ["Copilot", "Word"] },
+      { text: "Build a visually structured one-pager summarising our team's quarterly goals, key projects, and success measures — suitable for sharing with senior leadership.", apps: ["Word", "PowerPoint"] },
+    ]
+  },
+  {
+    id: 'Data',
+    label: '📊 Data Analysis',
+    desc: 'Excel · Power BI · Copilot',
+    color: '#06b6d4',
+    prompts: [
+      { text: "Create a dashboard in Excel showing revenue trends over the past 12 months, with a forecast for the next quarter using a trendline. Highlight months where performance was below target.", apps: ["Excel"], tip: true },
+      { text: "Analyse this dataset and identify the top three trends, any anomalies worth investigating, and a summary suitable for a non-technical leadership audience.", apps: ["Excel", "Copilot"] },
+      { text: "Build a KPI scorecard in Excel tracking five key metrics with monthly actuals versus targets, RAG status indicators, and a commentary column for narrative.", apps: ["Excel"] },
+      { text: "From this anonymised HR dataset, calculate average time-to-hire by department, identify which teams are above the organisational average, and suggest possible reasons.", apps: ["Excel", "Copilot"] },
+      { text: "Create a bar chart comparing team performance scores across five departments for Q1 and Q2, and add a data label showing the percentage change between quarters.", apps: ["Excel"] },
+      { text: "Analyse this survey data and provide a summary of key themes, sentiment breakdown, and three actionable recommendations based on the findings.", apps: ["Excel", "Copilot"] },
+      { text: "Generate a heat map in Excel showing absence rates by team and month over the past year, colour-coded from low (green) to high (red).", apps: ["Excel"] },
+      { text: "Identify any outliers in this financial dataset and explain what might be driving them, using plain language suitable for a non-finance manager.", apps: ["Excel", "Copilot"] },
+      { text: "Build a scenario analysis model in Excel showing three outcomes (optimistic, base, pessimistic) for [metric] based on varying key assumptions.", apps: ["Excel"] },
+      { text: "Summarise the findings from this data report and create a set of five to seven bullet points I can use in a board presentation.", apps: ["Copilot", "Word"] },
+    ]
+  },
+  {
+    id: 'Email',
+    label: '📧 Email & Communication',
+    desc: 'Outlook · Teams · Copilot',
+    color: '#ec4899',
+    prompts: [
+      { text: "Summarise this email thread and highlight the key decisions made, outstanding action items, and who is responsible for each next step.", apps: ["Outlook"], tip: true },
+      { text: "Draft a professional response to this email declining the request politely, offering an alternative solution, and maintaining a positive working relationship.", apps: ["Outlook"] },
+      { text: "Write a follow-up email after today's meeting with [name/team], recapping what was agreed and confirming the next steps and deadlines.", apps: ["Outlook"] },
+      { text: "Draft a chaser email for an overdue response from [team/supplier], keeping the tone professional and assertive without being confrontational.", apps: ["Outlook"] },
+      { text: "Write an escalation email to [senior manager] about [issue], clearly stating the problem, impact, what has already been tried, and what decision or support is needed.", apps: ["Outlook"] },
+      { text: "Rewrite this email to make it more concise, clearer, and professional. Remove any unnecessary information and make the call to action explicit.", apps: ["Outlook", "Copilot"] },
+      { text: "Draft a welcome email to a new team member joining [department] on [date], covering the team's purpose, key contacts, first-week priorities, and an invitation to an intro call.", apps: ["Outlook"] },
+      { text: "Summarise my inbox from the past 48 hours, flag any emails requiring urgent action, and suggest a prioritised response order.", apps: ["Outlook"] },
+      { text: "Write a broadcast email announcing [change or update] to all staff, using a clear structure: what is changing, why it is changing, when it takes effect, and who to contact with questions.", apps: ["Outlook"] },
+      { text: "Draft a sensitive email informing a team member that their project deliverable is overdue, requesting an update on progress and a revised completion date.", apps: ["Outlook"] },
+    ]
+  },
+  {
+    id: 'Productivity',
+    label: '⚡ Personalisation & Productivity',
+    desc: 'Windows 11 · Copilot Chat · Teams · Edge',
+    color: '#a3e635',
+    prompts: [
+      { text: "Catch me up on the most important messages and updates in my busy Teams channels from the past week. Highlight anything requiring my input or decision.", apps: ["Teams"], tip: true },
+      { text: "Review my calendar for next week and suggest where I might be over-committed or could batch similar meetings to protect focused work time.", apps: ["Outlook", "Copilot"] },
+      { text: "What tasks do I have outstanding across my To Do list and Planner boards? Prioritise them by urgency and flag anything past its due date.", apps: ["To Do", "Planner"] },
+      { text: "Suggest five ways I could use Microsoft Copilot to save time in my weekly workflow based on the types of tasks I typically handle in [role/department].", apps: ["Copilot"] },
+      { text: "Set a reminder to review the project risk register every Monday at 9am and prepare a brief status update for the weekly team meeting.", apps: ["To Do", "Windows 11"] },
+      { text: "Help me plan my week by reviewing my meetings, pending tasks, and key deadlines, and suggest a daily schedule that balances reactive and proactive work.", apps: ["Outlook", "Copilot"] },
+      { text: "Analyse how I've used my time over the past month using Viva Insights data and suggest two or three changes to improve my focus and reduce meeting overload.", apps: ["Viva", "Copilot"] },
+      { text: "Search across my recent files and emails for all documents related to [project name] and give me a summary of where things currently stand.", apps: ["Copilot", "Windows 11"] },
+      { text: "Draft a personal weekly review template I can complete every Friday to capture wins, blockers, priorities for next week, and any learning points.", apps: ["Word", "Copilot"] },
+      { text: "Recommend three Copilot prompts I should use regularly based on my role as a [job title], to help me save time, improve communication, and stay organised.", apps: ["Copilot"] },
+    ]
+  },
+];
+
+let activeFilter = 'all';
+
+function getCardHTML(prompt, catColor, idx) {
+  const apps = prompt.apps.map(a => `<span class="app-tag">${a}</span>`).join('');
+  const tip = prompt.tip ? `<span class="tip-tag">⭐ Example</span>` : '';
+  return `
+    <div class="prompt-card" style="--cat-color:${catColor}; animation-delay:${idx * 0.04}s" onclick="copyPrompt(this, '${prompt.text.replace(/'/g,"\\'")}')">
+      <div class="prompt-top">
+        <div class="prompt-app">${apps}</div>
+      </div>
+      <div class="prompt-text">${prompt.text}</div>
+      <div class="prompt-actions">
+        <button class="copy-btn" onclick="event.stopPropagation(); copyPrompt(this.closest('.prompt-card'), '${prompt.text.replace(/'/g,"\\'")}')">📋 Copy Prompt</button>
+        ${tip}
+      </div>
+    </div>`;
+}
+
+function renderPrompts() {
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  const container = document.getElementById('promptContainer');
+  let totalShown = 0;
+  let html = '';
+
+  for (const cat of categories) {
+    if (activeFilter !== 'all' && cat.id !== activeFilter) continue;
+    const filtered = cat.prompts.filter(p =>
+      !query || p.text.toLowerCase().includes(query) || p.apps.join(' ').toLowerCase().includes(query)
+    );
+    if (!filtered.length) continue;
+    totalShown += filtered.length;
+    const cards = filtered.map((p, i) => getCardHTML(p, cat.color, i)).join('');
+    html += `
+      <div class="category-section">
+        <div class="category-header">
+          <span class="cat-dot" style="background:${cat.color}; box-shadow: 0 0 8px ${cat.color}66"></span>
+          <h2 style="color:${cat.color}">${cat.label}</h2>
+          <span class="cat-desc">${cat.desc}</span>
+          <span class="cat-count">${filtered.length} prompts</span>
+        </div>
+        <div class="prompt-grid">${cards}</div>
+      </div>`;
+  }
+
+  container.innerHTML = html || '<p style="color:var(--muted);text-align:center;padding:40px 0">No prompts match your search.</p>';
+  document.getElementById('resultsInfo').textContent = `Showing ${totalShown} prompt${totalShown !== 1 ? 's' : ''}`;
+}
+
+function filterPrompts() { renderPrompts(); }
+
+function setFilter(cat, btn) {
+  activeFilter = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPrompts();
+}
+
+function copyPrompt(card, text) {
+  navigator.clipboard.writeText(text).catch(() => {});
+  const btn = card.querySelector('.copy-btn');
+  if (!btn) return;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '✅ Copied!';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 1800);
+}
+
+renderPrompts();
+</script>
+</body>
+</html>
